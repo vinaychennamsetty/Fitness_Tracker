@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/auth'; // Change if backend is deployed
+const API_URL = 'https://your-api-url.onrender.com'; // Change if backend is deployed
 
 export const signup = async (userData) => {
     try {
