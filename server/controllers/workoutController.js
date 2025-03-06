@@ -1,35 +1,36 @@
-const Workout = require('../models/Workout');
+const Workout = require("../models/WorkoutModel");
+
+const getWorkouts = async (req, res) => {
+    try {
+        const workouts = await Workout.find({ user: req.user.id });
+        res.status(200).json(workouts);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
 
 const addWorkout = async (req, res) => {
     try {
         const { type, duration, caloriesBurned } = req.body;
 
-        if (!req.user) {
-            return res.status(401).json({ message: 'User not authorized' });
+        if (!type || !duration || !caloriesBurned) {
+            return res.status(400).json({ message: "All fields are required!" });
         }
 
-        const workout = new Workout({
-            user: req.user,
+        if (!req.user) {
+            return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        const newWorkout = await Workout.create({
+            user: req.user._id,
             type,
             duration,
-            caloriesBurned
+            caloriesBurned,
         });
 
-        await workout.save();
-        res.status(201).json({ message: 'Workout added successfully', workout });
+        res.status(201).json(newWorkout);
     } catch (error) {
-        console.error('Add Workout Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-};
-
-const getWorkouts = async (req, res) => {
-    try {
-        const workouts = await Workout.find({ user: req.user }).sort({ date: -1 });
-        res.json(workouts);
-    } catch (error) {
-        console.error('Get Workouts Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 };
 
@@ -38,21 +39,18 @@ const deleteWorkout = async (req, res) => {
         const workout = await Workout.findById(req.params.id);
 
         if (!workout) {
-            return res.status(404).json({ message: 'Workout not found' });
+            return res.status(404).json({ message: "Workout not found" });
         }
 
-        if (workout.user.toString() !== req.user) {
-            return res.status(401).json({ message: 'Not authorized' });
+        if (workout.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: "Not authorized to delete this workout" });
         }
 
-        //  Fix: Use deleteOne instead of remove()
-        await Workout.deleteOne({ _id: req.params.id });
-
-        res.json({ message: 'Workout removed' });
+        await workout.deleteOne();
+        res.status(200).json({ message: "Workout deleted successfully" });
     } catch (error) {
-        console.error('Delete Workout Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 };
 
-module.exports = { addWorkout, getWorkouts, deleteWorkout };
+module.exports = { getWorkouts, addWorkout, deleteWorkout };

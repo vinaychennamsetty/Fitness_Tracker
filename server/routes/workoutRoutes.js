@@ -1,11 +1,11 @@
-const express = require('express');
-const { addWorkout, getWorkouts, deleteWorkout } = require('../controllers/workoutController'); // ✅ Ensure correct import
-const protect = require('../middleware/authMiddleware');
+const express = require("express");
+const { getWorkouts, addWorkout, deleteWorkout } = require("../controllers/workoutController");
+const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-router.post('/add', protect, addWorkout);  // ✅ Correct function reference
-router.get('/', protect, getWorkouts);     // ✅ Correct function reference
-router.delete('/:id', protect, deleteWorkout); // ✅ Correct function reference
+router.get("/", protect, getWorkouts);
+router.post("/", protect, addWorkout);
+router.delete("/:id", protect, deleteWorkout);
 
 module.exports = router;

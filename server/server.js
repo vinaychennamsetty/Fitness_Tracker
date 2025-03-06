@@ -1,29 +1,30 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/db');
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const connectDB = require("./config/db");
 
-const authRoutes = require('./routes/authRoutes'); // Import authentication routes
+// Import Routes
+const authRoutes = require("./routes/authRoutes");
+const workoutRoutes = require("./routes/workoutRoutes");
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+// Load environment variables
+dotenv.config();
 
 // Connect to MongoDB
 connectDB();
 
-app.use('/api/auth', require('./routes/authRoutes'));
+// Initialize Express
+const app = express();
 
+// Middleware
+app.use(express.json());
+app.use(cors());
 
-// Define Routes
-app.use('/api/auth', authRoutes); // Use authentication routes
-
-app.use('/api/workouts', require('./routes/workoutRoutes'));
-
-
-app.get('/', (req, res) => {
-    res.send('Fitness Tracker API is running...');
-});
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/workouts", workoutRoutes);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+});

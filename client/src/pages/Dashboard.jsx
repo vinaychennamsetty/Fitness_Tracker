@@ -1,124 +1,207 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { fetchWorkouts, addWorkout, deleteWorkout } from '../api/workoutApi';
-import WorkoutChart from '../components/WorkoutChart';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-function Dashboard() {
-    const navigate = useNavigate();
-    const [workouts, setWorkouts] = useState([]);
-    const [type, setType] = useState('');
-    const [duration, setDuration] = useState('');
-    const [caloriesBurned, setCaloriesBurned] = useState('');
-    const [error, setError] = useState('');
+const Dashboard = () => {
+  const [workouts, setWorkouts] = useState([]);
+  const [type, setType] = useState("");
+  const [duration, setDuration] = useState("");
+  const [caloriesBurned, setCaloriesBurned] = useState("");
+  const [deletedWorkout, setDeletedWorkout] = useState(null);
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            navigate('/login'); // Redirect if not logged in
-        } else {
-            loadWorkouts(token);
-        }
-    }, [navigate]);
+  useEffect(() => {
+    fetchWorkouts();
+  }, []);
 
-    const loadWorkouts = async (token) => {
-        try {
-            const data = await fetchWorkouts(token);
-            setWorkouts(data);
-        } catch (err) {
-            setError(err);
-        }
-    };
+  // Fetch Workouts
+  const fetchWorkouts = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("http://localhost:5000/api/workouts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setWorkouts(res.data);
+    } catch (error) {
+      console.error("❌ Error fetching workouts:", error);
+    }
+  };
 
-    const handleAddWorkout = async (e) => {
-        e.preventDefault();
-        const token = localStorage.getItem('token');
-        try {
-            await addWorkout(token, { type, duration, caloriesBurned });
-            setType('');
-            setDuration('');
-            setCaloriesBurned('');
-            loadWorkouts(token); // Reload workouts after adding
-        } catch (err) {
-            setError(err);
-        }
-    };
+  // Add Workout
+  const handleAddWorkout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        "http://localhost:5000/api/workouts",
+        { type, duration, caloriesBurned },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    const handleDeleteWorkout = async (id) => {
-        const token = localStorage.getItem('token');
-        try {
-            await deleteWorkout(token, id);
-            setWorkouts(workouts.filter(workout => workout._id !== id)); // Remove from UI
-        } catch (err) {
-            setError(err);
-        }
-    };
+      setWorkouts([...workouts, res.data]);
+      setType("");
+      setDuration("");
+      setCaloriesBurned("");
+    } catch (error) {
+      console.error("❌ Error adding workout:", error.response?.data?.message || error.message);
+    }
+  };
 
-    return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
-            <div className="max-w-4xl w-full bg-white p-6 rounded-lg shadow-lg">
-                <h1 className="text-3xl font-bold text-center text-blue-600">🏋️‍♂️ Fitness Dashboard</h1>
+  // Delete Workout with Undo
+  const handleDeleteWorkout = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
 
-                {error && <p className="text-red-500 text-center mt-2">{error}</p>}
+      const workoutToDelete = workouts.find((workout) => workout._id === id);
+      setDeletedWorkout(workoutToDelete);
 
-                {/* Workout Chart */}
-                <div className="mt-6">
-                    {workouts.length> 0 && <WorkoutChart workouts={workouts} />}
-                </div>
+      setWorkouts(workouts.filter((workout) => workout._id !== id));
 
-                {/* Add Workout Form */}
-                <h2 className="text-xl font-semibold mt-6">➕ Add a Workout</h2>
-                <form className="mt-4 space-y-4" onSubmit={handleAddWorkout}>
-                    <input 
-                        type="text" 
-                        placeholder="Workout Type (e.g., Running, Yoga)" 
-                        value={type} 
-                        onChange={(e) => setType(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring focus:ring-blue-400"
-                        required 
-                    />
-                    <input 
-                        type="number" 
-                        placeholder="Duration (min)" 
-                        value={duration} 
-                        onChange={(e) => setDuration(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring focus:ring-blue-400"
-                        required 
-                    />
-                    <input 
-                        type="number" 
-                        placeholder="Calories Burned" 
-                        value={caloriesBurned} 
-                        onChange={(e) => setCaloriesBurned(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring focus:ring-blue-400"
-                        required 
-                    />
-                    <button type="submit" className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-800 transition">
-                        Add Workout
-                    </button>
-                </form>
+      await axios.delete(`http://localhost:5000/api/workouts/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-                {/* Workout List */}
-                <h2 className="text-xl font-semibold mt-6">📋 Your Workouts</h2>
-                <ul className="mt-4 space-y-3">
-                    {workouts.length > 0 ? (
-                        workouts.map(workout => (
-                            <li key={workout._id} className="p-4 bg-gray-200 rounded-lg flex justify-between items-center shadow">
-                                <span className="text-lg font-medium">{workout.type} - {workout.duration} mins - {workout.caloriesBurned} cal</span>
-                                <button 
-                                    onClick={() => handleDeleteWorkout(workout._id)} 
-                                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-                                >
-                                    🗑 Delete
-                                </button>
-                            </li>
-                        ))
-                    ) : (
-                        <p className="text-center text-gray-600 mt-3">No workouts added yet.</p>
-                    )}
-                </ul>
-            </div>
+      setTimeout(() => setDeletedWorkout(null), 5000);
+    } catch (error) {
+      console.error("❌ Error deleting workout:", error.response?.data?.message || error.message);
+    }
+  };
+
+  // Undo Delete Workout
+  const handleUndoDelete = async () => {
+    if (deletedWorkout) {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.post(
+          "http://localhost:5000/api/workouts",
+          {
+            type: deletedWorkout.type,
+            duration: deletedWorkout.duration,
+            caloriesBurned: deletedWorkout.caloriesBurned,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setWorkouts([...workouts, res.data]);
+        setDeletedWorkout(null);
+      } catch (error) {
+        console.error("❌ Error restoring workout:", error.response?.data?.message || error.message);
+      }
+    }
+  };
+
+  // Logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
+
+  return (
+    <div className="w-screen h-screen bg-gray-100 flex flex-col">
+      {/* Header */}
+      <div className="flex justify-between items-center w-full p-6 bg-white shadow-md">
+        <h1 className="text-3xl font-bold">🏋️‍♂️ Dashboard</h1>
+        <button
+          onClick={handleLogout}
+          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+        >
+          Logout
+        </button>
+      </div>
+
+      {/* Main Container - Full Width & Full Height*/}
+      <div className="flex w-full h-full p-6">
+        {/* Left Sidebar - Add Workout */}
+        <div className="w-1/4 bg-white p-6 rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold mb-4">Add Workout</h2>
+          <div className="flex flex-col space-y-3">
+            <input
+              type="text"
+              placeholder="Workout Type (e.g. Running)"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="border p-2 rounded"
+            />
+            <input
+              type="number"
+              placeholder="Duration (in minutes)"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className="border p-2 rounded"
+            />
+            <input
+              type="number"
+              placeholder="Calories Burned"
+              value={caloriesBurned}
+              onChange={(e) => setCaloriesBurned(e.target.value)}
+              className="border p-2 rounded"
+            />
+            <button
+              onClick={handleAddWorkout}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Add Workout
+            </button>
+          </div>
         </div>
-    );
-}
+
+        {/* Workout List & Chart */}
+        <div className="flex-1 flex flex-col space-y-6 px-6">
+          {/* Workout List */}
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-xl font-semibold mb-2">Your Workouts</h2>
+            {workouts.length === 0 ? (
+              <p className="text-gray-500">No workouts yet. Add one!</p>
+            ) : (
+              <ul className="space-y-2">
+                {workouts.map((workout) => (
+                  <li key={workout._id} className="flex justify-between p-2 border-b">
+                    {`${workout.type} - ${workout.duration} min - ${workout.caloriesBurned} cal`}
+                    <button
+                      onClick={() => handleDeleteWorkout(workout._id)}
+                      className="bg-red-500 text-white px-2 rounded hover:bg-red-600"
+                    >
+                      ❌
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Undo Delete Button */}
+            {deletedWorkout && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={handleUndoDelete}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                  Undo Delete
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Workout Chart - Take Full Width */}
+          {workouts.length > 0 && (
+            <div className="bg-white p-6 rounded-lg shadow-lg flex-grow">
+              <h2 className="text-xl font-semibold mb-4">Workout Progress</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={workouts}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="type" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="duration" stroke="#8884d8" strokeWidth={2} />
+                  <Line type="monotone" dataKey="caloriesBurned" stroke="#82ca9d" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default Dashboard;

@@ -2,7 +2,6 @@ import React from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const WorkoutChart = ({ workouts }) => {
-  // Format data for chart
   const chartData = workouts.map((workout, index) => ({
     name: `Day ${index + 1}`,
     Duration: workout.duration,
@@ -10,7 +9,7 @@ const WorkoutChart = ({ workouts }) => {
   }));
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
+    <div className="w-full bg-white p-6 rounded-lg shadow-lg mt-6">
       <h2 className="text-xl font-semibold text-center text-blue-600">📊 Workout Progress</h2>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData}>
